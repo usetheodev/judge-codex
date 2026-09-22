@@ -8,6 +8,35 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and this proj
 
 ### Changed
 
+- **The judge looked for artifacts where the pipeline stopped writing them, and wrote
+  its own output where nobody reads.** `STAGE_DISCOVERY_PATHS` held `knowledge-base/…`
+  and `.claude/knowledge-base/…` only — the two oldest record roots the cycle ecosystem
+  ever used — while the current write root is `<project>/.squad/records/`, with
+  `records/` and `.claude/records/` as the documented fallbacks. Measured 2026-09-21 on
+  a project using the current layout: `judge --stage plan --slug probe` printed
+  `Artifact not found` for a plan that was on disk, for all four stages. This plugin
+  fills the ORTHOGONAL seat of a 2-of-3 review panel, so a judge that cannot open the
+  document does not weaken the panel — it removes the one reviewer the other two cannot
+  stand in for, and the panel records an abstention nobody asked for. All five roots now
+  resolve, newest first, and the legacy two stay last so a consumer that never migrated
+  keeps its judge. Output moved the same way: it went to `knowledge-base/judge-codex/`
+  unconditionally, outside the consumer's declared write root, and now lands in the first
+  record root that exists. The `discover` stage also accepts `<slug>-opportunity.md` and
+  `discover-opportunity-golden-rule.md` beside the retired `-blueprint` spellings, which
+  is what that cycle has written since it was renamed. `tests/artifact-discovery.test.sh`
+  covers all four stages on the current layout plus the legacy one, with `codex` stubbed,
+  so the table cannot drift from the code again in silence.
+
+- **The four stage judges declared a model that exists on neither side.**
+  `model: gpt-5-codex` in an agent frontmatter selects the CLAUDE model that runs the
+  sub-agent, and `gpt-5-codex` is not one — while `codex exec --model gpt-5-codex` is
+  itself refused on a ChatGPT account (`400 invalid_request_error: not supported when
+  using Codex with a ChatGPT account`, measured 2026-09-21 on codex-cli 0.154.0). The
+  field pointed at nothing in either direction. It is `sonnet` now, matching the three
+  sibling agents: this sub-agent assembles context and invokes the companion, and the
+  judging model is Codex's own — resolved from `~/.codex/config.toml`, because the
+  companion deliberately omits `--model` so the account default wins.
+
 - **Repository renamed from `judge-codex-plugin-cc` to `judge-codex`,** matching the plugin id it has always declared. The `-plugin-cc` suffix said where the plugin runs, not what it does. New location: `https://github.com/usetheodev/judge-codex`; install with `/plugin marketplace add usetheodev/judge-codex`. GitHub redirects the old URL, so existing clones keep working until their remote is updated.
 
 ## [0.1.0] - 2026-06-04

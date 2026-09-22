@@ -15,7 +15,7 @@ How the companion script assembles the prompt fed to `codex exec`.
 
 <segment 2: golden-rule contract — read from CONSUMER_REPO/rules/<rule>.md OR ${CLAUDE_PLUGIN_ROOT}/templates/golden-rules/<rule>.md fallback>
 
-<segment 3: artifact to judge — read from CONSUMER_REPO/knowledge-base/<dir>/<slug>-<stage>.md>
+<segment 3: artifact to judge — read from CONSUMER_REPO/<record-root>/<dir>/<slug>-<stage>.md>
 
 <segment 4: stage-specific instructions:>
 You are judging stage "<stage>" of slug "<slug>". Read the golden-rule above, then the artifact, then emit ONLY a JSON object matching schemas/<stage>-judge-output.schema.json. No prose around the JSON. No code fences around the JSON.
@@ -31,7 +31,7 @@ You are judging stage "<stage>" of slug "<slug>". Read the golden-rule above, th
 
 | Stage | Primary rule | Fallback (in plugin) |
 |---|---|---|
-| `discover` | `rules/discover-blueprint-golden-rule.md` | `templates/golden-rules/discover-blueprint-golden-rule.md` |
+| `discover` | `rules/discover-opportunity-golden-rule.md` | `templates/golden-rules/discover-opportunity-golden-rule.md` |
 | `plan` | `rules/plan-confidence-golden-rule.md` | `templates/golden-rules/plan-confidence-golden-rule.md` |
 | `implementation` | `rules/cycle-implement.md` + `rules/code-quality-golden-rule.md` | both fallbacks |
 | `final` | `rules/cycle-review.md` | `templates/golden-rules/cycle-review.md` |

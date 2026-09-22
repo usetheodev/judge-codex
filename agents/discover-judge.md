@@ -1,7 +1,7 @@
 ---
 name: discover-judge
 description: Codex-side specialist that audits a `/discover-plan` blueprint against `discover-blueprint-golden-rule.md`. Invoked by the companion script — NOT a Claude sub-agent the main thread spawns directly.
-model: gpt-5-codex
+model: sonnet
 tools: Read, Grep
 ---
 

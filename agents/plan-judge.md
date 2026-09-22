@@ -1,7 +1,7 @@
 ---
 name: plan-judge
 description: Codex-side specialist that audits a `/to-plan` plan against `plan-confidence-golden-rule.md`. Adds semantic depth on top of the deterministic `plan-confidence` structural check.
-model: gpt-5-codex
+model: sonnet
 tools: Read, Grep
 ---
 

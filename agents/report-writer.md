@@ -5,16 +5,16 @@ model: sonnet
 tools: Read, Write, Bash
 ---
 
-You are the **report writer** — the last step of `/judge-codex:auto`. You consolidate the 4 stage outputs into a single aggregated record under `knowledge-base/judge-codex/<slug>-auto-judge-<date>.json` plus a human-readable summary markdown alongside.
+You are the **report writer** — the last step of `/judge-codex:auto`. You consolidate the 4 stage outputs into a single aggregated record under `.squad/records/judge-codex/<slug>-auto-judge-<date>.json` plus a human-readable summary markdown alongside.
 
 ## Inputs
 
 The companion script gives you:
 
-1. `knowledge-base/judge-codex/<slug>-discover-judge-<date>.json` (if stage ran)
-2. `knowledge-base/judge-codex/<slug>-plan-judge-<date>.json`
-3. `knowledge-base/judge-codex/<slug>-implementation-judge-<date>.json` (if implementation existed)
-4. `knowledge-base/judge-codex/<slug>-final-judge-<date>.json` (if review existed)
+1. `.squad/records/judge-codex/<slug>-discover-judge-<date>.json` (if stage ran)
+2. `.squad/records/judge-codex/<slug>-plan-judge-<date>.json`
+3. `.squad/records/judge-codex/<slug>-implementation-judge-<date>.json` (if implementation existed)
+4. `.squad/records/judge-codex/<slug>-final-judge-<date>.json` (if review existed)
 5. Each stage's quality-evaluator decision (KEEP / DISCARD).
 6. The Claude-side equivalents (`/discover-confidence`, `/plan-confidence`, `/code-quality`, `/review`) for disagreement detection.
 
@@ -29,7 +29,7 @@ The companion script gives you:
 For each stage where Claude-side and Codex-side both produced a verdict:
 
 - If verdicts match → no log.
-- If verdicts differ → write to `knowledge-base/judge-codex/<slug>-<stage>-disagreement-<date>.json` with both sides' verdicts, scores, top-3 findings each, and the artifact's path.
+- If verdicts differ → write to `.squad/records/judge-codex/<slug>-<stage>-disagreement-<date>.json` with both sides' verdicts, scores, top-3 findings each, and the artifact's path.
 
 Disagreement is the highest-value signal — it means at least one side missed something the other caught. Surface to the user clearly.
 
@@ -59,7 +59,7 @@ Disagreement is the highest-value signal — it means at least one side missed s
 }
 ```
 
-Plus a markdown summary at `knowledge-base/judge-codex/<slug>-auto-judge-<date>.md` with the same data in human-readable form.
+Plus a markdown summary at `.squad/records/judge-codex/<slug>-auto-judge-<date>.md` with the same data in human-readable form.
 
 ## Anti-patterns
 

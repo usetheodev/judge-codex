@@ -7,15 +7,17 @@ allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), AskUserQuestion
 
 # `/judge-codex:auto`
 
+> Paths here name the CURRENT record root (`.squad/records/`). The companion resolves four older roots as fallbacks — see the `cycle-plan-context` skill for the full order.
+
 End-to-end orthogonal review. Runs the 4 stage judges sequentially against artifacts produced by a single slice, then emits an aggregated verdict.
 
 ## Sequence
 
 ```
-/judge-codex:discover       <slug>   (if blueprint exists at knowledge-base/discoveries/blueprints/)
+/judge-codex:discover       <slug>   (if blueprint exists at .squad/records/discoveries/opportunities/)
 /judge-codex:plan           <slug>   (always — every slice has a plan)
-/judge-codex:implementation <slug>   (if knowledge-base/implementations/<slug>-implementation.md exists)
-/judge-codex:final          <slug>   (if knowledge-base/reviews/<slug>-review-*.md exists)
+/judge-codex:implementation <slug>   (if .squad/records/implementations/<slug>-implementation.md exists)
+/judge-codex:final          <slug>   (if .squad/records/reviews/<slug>-review-*.md exists)
 ```
 
 Each stage is mandatory IF the upstream artifact exists. Missing upstream artifacts produce `STAGE_SKIPPED` entries, never errors.
@@ -25,7 +27,7 @@ Each stage is mandatory IF the upstream artifact exists. Missing upstream artifa
 After the 4 stages run, the auto-orchestrator emits one consolidated JSON record:
 
 ```
-knowledge-base/judge-codex/<slug>-auto-judge-<date>.json
+.squad/records/judge-codex/<slug>-auto-judge-<date>.json
 ```
 
 Contents:
@@ -66,7 +68,7 @@ Bash({
 })
 ```
 
-After launch: "judge-codex auto started. Check `/judge-codex:status` for progress; aggregated report lands in knowledge-base/judge-codex/<slug>-auto-judge-<date>.json."
+After launch: "judge-codex auto started. Check `/judge-codex:status` for progress; aggregated report lands in .squad/records/judge-codex/<slug>-auto-judge-<date>.json."
 
 ## Refuse to run when
 

@@ -7,7 +7,9 @@ allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), AskUserQuestion
 
 # `/judge-codex:implementation`
 
-Submits `knowledge-base/implementations/<slug>-implementation.md` + the actual commits (via `git log` since the plan's slug-tagged base) to **Codex** as orthogonal jury, validated against `rules/cycle-implement.md`.
+> Paths here name the CURRENT record root (`.squad/records/`). The companion resolves four older roots as fallbacks — see the `cycle-plan-context` skill for the full order.
+
+Submits `.squad/records/implementations/<slug>-implementation.md` + the actual commits (via `git log` since the plan's slug-tagged base) to **Codex** as orthogonal jury, validated against `rules/cycle-implement.md`.
 
 ## What Codex evaluates
 
@@ -24,7 +26,7 @@ Submits `knowledge-base/implementations/<slug>-implementation.md` + the actual c
 ## Output
 
 ```
-knowledge-base/judge-codex/<slug>-implementation-judge-<date>.json
+.squad/records/judge-codex/<slug>-implementation-judge-<date>.json
 ```
 
 Schema: `schemas/implementation-judge-output.schema.json`. Verdict vocabulary aligned with `cycle-implement.md` exit states.
@@ -45,6 +47,6 @@ Identical pattern to `/judge-codex:discover`. Stage = `implementation`.
 ## Refuse to run when
 
 - Slug omitted.
-- `knowledge-base/implementations/<slug>-implementation.md` not found.
+- `.squad/records/implementations/<slug>-implementation.md` not found.
 - Working tree dirty (per `cycle-review.md` discipline — judge a stable state).
 - `codex` CLI absent.
