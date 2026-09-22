@@ -9,7 +9,7 @@ this codebase writes prose everywhere else, becomes a command substitution.
 
 Measured 2026-09-22 against this plugin's own stop hook:
 
-    stop-hook.sh: line 319: re.search: comando não encontrado
+    stop-hook.sh: line 319: re.search: command not found
 
 `re.search` was run as a command and Python received its empty output in place of the
 words. It sat in a comment, so only the stderr was polluted — the same construct on a
