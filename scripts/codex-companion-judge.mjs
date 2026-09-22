@@ -40,6 +40,14 @@ const RECORD_ROOTS = [".squad/records", ".claude/records", "records", ".claude/k
 
 const under = (leaf) => RECORD_ROOTS.map((root) => `${root}/${leaf}`);
 
+//: Durable knowledge lives beside the dated trail, not inside it, and the consumer keeps
+//: them apart on purpose: `records/` is what one run produced and is immutable; `wiki/`
+//: is what the project knows and is revised. A reader that folded them together would
+//: resolve a drawing set out of a run's output.
+const WIKI_ROOTS = [".squad/wiki", ".claude/wiki", "wiki"];
+
+const underWiki = (leaf) => WIKI_ROOTS.map((root) => `${root}/${leaf}`);
+
 const STAGE_DISCOVERY_PATHS = {
   discover: {
     artifact: [...under("discoveries/opportunities"), ...under("discoveries/blueprints")],
@@ -70,6 +78,18 @@ const STAGE_DISCOVERY_PATHS = {
     rule: ["cycle-review.md"],
     agent: "final-judge.md",
     schema: "final-judge-output.schema.json",
+  },
+  // The one stage whose artifact is a DIRECTORY rather than a file, and the one that
+  // reads out of the wiki. `bundle` lists the drawings the phase declares mandatory;
+  // a set missing one of them is incomplete, which the consumer's own
+  // `check_design_completeness.py` already refuses — so the judge is never asked to
+  // grade a partial set and never has to decide what a missing drawing means.
+  design: {
+    artifact: underWiki("design"),
+    bundle: ["states.md", "trust.md", "sequence.md", "durability.md", "system-map.md"],
+    rule: ["design-golden-rule.md"],
+    agent: "design-judge.md",
+    schema: "design-judge-output.schema.json",
   },
 };
 
@@ -129,6 +149,13 @@ function locateArtifact(consumerRoot, stage, slug) {
   for (const dir of cfg.artifact) {
     const abs = path.join(consumerRoot, dir);
     if (!fs.existsSync(abs)) continue;
+    if (cfg.bundle) {
+      // Present means every declared drawing is present. A partial set would be graded
+      // as if the missing ones said nothing, and "absent" and "empty" are different
+      // claims about a design.
+      if (cfg.bundle.every((f) => fs.existsSync(path.join(abs, f)))) return abs;
+      continue;
+    }
     if (stage === "final") {
       // Latest by mtime among <slug>-review-*.md
       const entries = fs.readdirSync(abs)
@@ -174,6 +201,15 @@ const ARTIFACT_HARD_FENCE_BYTES = Number(process.env.JUDGE_CODEX_MAX_ARTIFACT_BY
 
 function readUtf8(p) {
   const stat = fs.statSync(p);
+  if (stat.isDirectory()) {
+    // Labelled, because a finding that cannot name its drawing is an opinion. Sorted,
+    // so two runs over one design read the same text in the same order.
+    return fs.readdirSync(p)
+      .filter((f) => f.endsWith(".md"))
+      .sort()
+      .map((f) => `<<<FILE ${f}>>>\n${fs.readFileSync(path.join(p, f), "utf8")}\n<<<END FILE ${f}>>>`)
+      .join("\n\n");
+  }
   if (stat.size > ARTIFACT_HARD_FENCE_BYTES) {
     // We still refuse to silently feed a multi-MB file when the user did not
     // explicitly raise the fence. Quality requires full context; safety

@@ -85,6 +85,32 @@ for spec in \
   fi
 done
 
+# DESIGN is the one stage whose artifact is a directory, and it lives in the wiki
+# rather than the dated trail: `cycle-design.md` puts the five drawings under
+# `<project>/.squad/wiki/design/`. A stage table that only knows single files under
+# `records/` cannot reach it, which is why this case is spelled out separately.
+echo "design reads the drawing set out of the wiki:"
+root="$WORK/design"
+mkdir -p "$root/.squad/wiki/design" "$root/rules"
+for d in states trust sequence durability system-map; do
+  printf '# %s\n\n```mermaid\nflowchart TD\n  A --> B\n```\n' "$d" > "$root/.squad/wiki/design/$d.md"
+done
+printf 'x\n' > "$root/rules/design-golden-rule.md"
+git -C "$root" init -q . 2>/dev/null
+out="$(cd "$root" && node "$COMPANION" judge --stage design --slug probe 2>&1)"
+# `Artifact not found` is not the only way this fails: an unknown stage never gets
+# as far as looking, and its message says something else entirely.
+if grep -qE "Artifact not found|Unknown stage" <<< "$out"; then
+  fail "stage=design did not reach .squad/wiki/design/ — $(head -1 <<< "$out")"
+else
+  pass "stage=design found the drawing set"
+fi
+if [ -d "$root/.squad/records/judge-codex" ]; then
+  pass "stage=design wrote under .squad/records/judge-codex"
+else
+  fail "stage=design wrote no output under the record root"
+fi
+
 # The legacy layout must keep working: a consumer that never migrated still has a judge.
 echo "legacy layout still resolves:"
 root="$(project legacy "knowledge-base/plans" "probe-plan.md")"

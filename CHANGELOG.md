@@ -4,6 +4,52 @@ All notable changes to this project are recorded in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/) and this project adopts [Semantic Versioning](https://semver.org/).
 
+### Added
+
+- **A judge seated on a review panel now speaks the panel's language.** These agents
+  serve two callers and only one was ever written down: `/judge-codex:<stage>` wants the
+  JSON its schema defines, with a `verdict` from the cycle vocabulary; a panel seat wants
+  ONE vote — `approve` / `return` / `abstain` — recorded with `cast_vote.py`. The consumer
+  seats `judge-codex:*` as the ORTHOGONAL chair of a 2-of-3 panel in DISCOVER, PLAN and
+  DESIGN. Measured 2026-09-22 against it:
+
+      $ python3 mechanisms/cycle/cast_vote.py … --verdict SHIPPABLE --reason "…"
+      REFUSED: `SHIPPABLE` is not one of approve, return, abstain
+
+  The seat was reachable, convened and briefed, and would have produced a vote the tally
+  refuses — an abstention nobody intended, on the one reviewer the other two cannot stand
+  in for. Every judge now carries a `## Two callers, two outputs` section naming both, the
+  three tokens, and the recorder; the four that could not run a command gained `Bash`; and
+  the `cast_vote.py` line names the seat as the roster spells it (`judge-codex:<agent>`),
+  because the tally checks the vote against the assignment. The section refuses the obvious
+  shortcut in writing: a cycle verdict is a score about structure and the panel is asking a
+  different question, so mapping one onto the other mechanically is not answering it.
+  `tests/panel-seat.test.sh` checks the instruction is there to obey — it cannot check that
+  the model obeys it, and says so.
+
+- **A DESIGN stage, with a `design-judge` and its own schema.** `cycle-design.md` gates the
+  phase on a 2-of-3 panel spanning two families, and the consumer's roster had to seat
+  `plan-judge` there because this plugin supplied no design judge — an approximation it
+  declared rather than glossed. The stage is the first whose artifact is a DIRECTORY and the
+  first that reads out of the wiki rather than the dated trail: five drawings under
+  `<project>/.squad/wiki/design/`, read together, because a contradiction between two of them
+  is invisible to a judge holding either alone. Each file is labelled in the prompt so a
+  finding can name its drawing, and a set missing any declared drawing does not resolve at
+  all — "absent" and "empty" are different claims about a design, and
+  `check_design_completeness.py` already refuses the incomplete set upstream.
+
+  The schema is DESIGN's own vocabulary (`DESIGN_AGREED` / `AWAITING_REVIEW` /
+  `NEEDS_REVISION` / `INVALID`), its findings name a drawing rather than a plan section, and
+  it carries `scope`: whether there was code to check against, and which drawings were
+  actually read. The golden rule makes that scope DERIVED — with no code, R1 is unaskable and
+  the judge may not conclude the design is right — so a reader has to be able to tell which
+  audit they are holding.
+
+  Verified end to end against the real CLI on a five-drawing probe: `fallback_used: false`,
+  `code_on_disk: false` correctly reported, and it found the two defects the fixture actually
+  had — a component in D5 that no other drawing covers, and a durability row claiming
+  survival with no store named.
+
 ## [Unreleased]
 
 ### Changed
