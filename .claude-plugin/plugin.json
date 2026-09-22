@@ -1,6 +1,6 @@
 {
   "name": "judge-codex",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Autonomous + rigorous Codex-as-judge layer for the plan cycle ecosystem (DISCOVER, PLAN, IMPLEMENT, CODE-QUALITY, REVIEW). Breaks the Claude-only monoculture by adding GPT-Codex as an orthogonal LLM jury that re-validates each cycle artifact against its golden-rule contract.",
   "author": {
     "name": "Paulo Henrique",

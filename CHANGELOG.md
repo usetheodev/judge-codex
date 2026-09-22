@@ -52,6 +52,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and this proj
 
 ## [Unreleased]
 
+### Added
+
+- **The inline-Python shell-expansion detector**, propagated from the sibling that
+  found the defect: `python3 -c "..."` is a double-quoted shell string, so a backtick
+  in the embedded program is executed by bash before the interpreter sees the source.
+  Clean here; carried so it stays clean.
+
 ### Changed
 
 - **The judge looked for artifacts where the pipeline stopped writing them, and wrote
