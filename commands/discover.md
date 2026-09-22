@@ -7,7 +7,9 @@ allowed-tools: Read, Glob, Grep, Bash(node:*), AskUserQuestion
 
 # `/judge-codex:discover`
 
-Submits the blueprint at `knowledge-base/discoveries/blueprints/<slug>-blueprint.md` to **Codex** as an orthogonal LLM jury, validated against `rules/discover-blueprint-golden-rule.md`.
+> Paths here name the CURRENT record root (`.squad/records/`). The companion resolves four older roots as fallbacks — see the `cycle-plan-context` skill for the full order.
+
+Submits the opportunity at `.squad/records/discoveries/opportunities/<slug>-opportunity.md` to **Codex** as an orthogonal LLM jury, validated against `rules/discover-opportunity-golden-rule.md`.
 
 ## What Codex evaluates
 
@@ -25,7 +27,7 @@ Submits the blueprint at `knowledge-base/discoveries/blueprints/<slug>-blueprint
 Structured JSON validated against `schemas/discover-judge-output.schema.json`. Persisted to:
 
 ```
-knowledge-base/judge-codex/<slug>-discover-judge-<date>.json
+.squad/records/judge-codex/<slug>-discover-judge-<date>.json
 ```
 
 Verdict enum: `SHIPPABLE` / `SHIPPABLE_WITH_CAVEATS` / `NEEDS_REVISION` / `FAIL_SOFT` / `FAIL_HARD` / `INVALID`.
@@ -61,5 +63,5 @@ After launch: "judge-codex started. Check `/judge-codex:status` for progress."
 ## Refuse to run when
 
 - Slug omitted.
-- `knowledge-base/discoveries/blueprints/<slug>-blueprint.md` not found.
+- `.squad/records/discoveries/opportunities/<slug>-opportunity.md` not found.
 - `codex` CLI absent (run `/judge-codex:setup` first).

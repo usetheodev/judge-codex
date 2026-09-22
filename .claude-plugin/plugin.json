@@ -1,12 +1,12 @@
 {
   "name": "judge-codex",
-  "version": "0.1.0",
+  "version": "0.3.3",
   "description": "Autonomous + rigorous Codex-as-judge layer for the plan cycle ecosystem (DISCOVER, PLAN, IMPLEMENT, CODE-QUALITY, REVIEW). Breaks the Claude-only monoculture by adding GPT-Codex as an orthogonal LLM jury that re-validates each cycle artifact against its golden-rule contract.",
   "author": {
     "name": "Paulo Henrique",
     "email": "paulohenrique.java@gmail.com"
   },
-  "repository": "https://github.com/usetheodev/judge-codex-plugin-cc",
+  "repository": "https://github.com/usetheodev/judge-codex",
   "license": "MIT",
   "keywords": [
     "cycle-plan",

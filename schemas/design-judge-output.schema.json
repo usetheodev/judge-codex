@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/paulohenriquevn/judge-codex/schemas/plan-judge-output.schema.json",
-  "title": "judge-codex plan stage output",
+  "$id": "https://github.com/paulohenriquevn/judge-codex/schemas/design-judge-output.schema.json",
+  "title": "judge-codex design stage output",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -11,21 +11,19 @@
     "soft_caps_triggered",
     "findings",
     "summary",
-    "cross_validation_vs_blueprint",
     "claude_side_verdict_anchor",
     "model_used",
     "elapsed_ms",
-    "fallback_used"
+    "fallback_used",
+    "scope"
   ],
   "properties": {
     "verdict": {
       "type": "string",
       "enum": [
-        "SHIPPABLE",
-        "SHIPPABLE_WITH_CAVEATS",
+        "DESIGN_AGREED",
+        "AWAITING_REVIEW",
         "NEEDS_REVISION",
-        "FAIL_SOFT",
-        "FAIL_HARD",
         "INVALID"
       ]
     },
@@ -39,11 +37,10 @@
       "items": {
         "type": "string",
         "enum": [
-          "coverage_lt_100",
-          "coverage_lt_100_semantic",
-          "fabricated_citation",
-          "adr_without_alternatives",
-          "bugfix_without_tdd"
+          "drawing_contradicts_code",
+          "open_question_drawn_as_decision",
+          "drawings_contradict_each_other",
+          "piece_placed_but_never_covered"
         ]
       }
     },
@@ -52,12 +49,10 @@
       "items": {
         "type": "string",
         "enum": [
-          "soft_floor_goal_not_smart",
-          "soft_floor_risks_empty_or_generic",
-          "soft_floor_open_questions_buried",
-          "soft_floor_test_plan_incomplete",
-          "soft_floor_acceptance_criteria_vague",
-          "soft_floor_blueprint_seeds_ignored"
+          "soft_floor_failure_path_undrawn",
+          "soft_floor_durability_claim_unbacked",
+          "soft_floor_boundary_unexamined",
+          "soft_floor_map_drawn_before_decisions"
         ]
       }
     },
@@ -71,9 +66,9 @@
           "stable_id",
           "title",
           "body",
-          "plan_section",
           "recommendation",
-          "confidence"
+          "confidence",
+          "drawing"
         ],
         "properties": {
           "severity": {
@@ -98,9 +93,6 @@
             "type": "string",
             "minLength": 1
           },
-          "plan_section": {
-            "type": "string"
-          },
           "recommendation": {
             "type": "string",
             "minLength": 1
@@ -112,6 +104,18 @@
             ],
             "minimum": 0,
             "maximum": 1
+          },
+          "drawing": {
+            "type": "string",
+            "enum": [
+              "D1-states",
+              "D2-trust",
+              "D3-sequence",
+              "D4-durability",
+              "D5-system-map",
+              "cross-drawing",
+              "sign-off"
+            ]
           }
         }
       }
@@ -119,49 +123,6 @@
     "summary": {
       "type": "string",
       "minLength": 1
-    },
-    "cross_validation_vs_blueprint": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "blueprint_exists": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "blueprint_adr_seeds_count": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "minimum": 0
-        },
-        "plan_adrs_absorbing_seeds_count": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "minimum": 0
-        },
-        "consistency_ratio": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "minimum": 0,
-          "maximum": 1
-        }
-      },
-      "required": [
-        "blueprint_exists",
-        "blueprint_adr_seeds_count",
-        "plan_adrs_absorbing_seeds_count",
-        "consistency_ratio"
-      ]
     },
     "claude_side_verdict_anchor": {
       "type": [
@@ -214,6 +175,27 @@
         "boolean",
         "null"
       ]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code_on_disk",
+        "drawings_read"
+      ],
+      "properties": {
+        "code_on_disk": {
+          "type": "boolean",
+          "description": "With code, R1 is askable and the audit is drawing-vs-code. Without it, only internal coherence was checked and the judge may not conclude the design is right."
+        },
+        "drawings_read": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Which of the five were actually read. A judge that read four and reported on five is claiming coverage it lacks."
+        }
+      }
     }
   }
 }
