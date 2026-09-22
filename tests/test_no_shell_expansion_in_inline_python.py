@@ -95,14 +95,16 @@ def _offenders(path: Path) -> list[tuple[int, str]]:
     out = []
     for line, source in _programs(path.read_text(encoding="utf-8")):
         if UNESCAPED_QUOTE.search(source):
-            out.append((line, "an unescaped double quote CLOSES the shell string here, "
-                              "so Python receives everything up to it and nothing after "
-                              "— a truncated program that may still parse, and whose "
-                              "empty output reads like an answer"))
+            why = ("an unescaped double quote CLOSES the shell string here, so Python "
+                   "receives everything up to it and nothing after — a truncated "
+                   "program that may still parse, and whose empty output reads like "
+                   "an answer")
+            out.append((line, why))
             continue
         if BACKTICK.search(source):
-            out.append((line, "an unescaped backtick: bash RUNS those words and splices "
-                              "in their output, which is usually nothing"))
+            why = ("an unescaped backtick: bash RUNS those words and splices in their "
+                   "output, which is usually nothing")
+            out.append((line, why))
             continue
     return out
 
