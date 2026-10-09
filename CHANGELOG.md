@@ -52,6 +52,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and this proj
 
 ## [Unreleased]
 
+### Fixed
+
+- **A judge prompt larger than 128 KiB reaches the model.** The companion passed the whole prompt in argv to `codex exec` and to the `claude --print` fallback, and a 141 KB plan failed with `E2BIG`. Both now read the prompt from stdin, and `tests/large-prompt.test.sh` checks a 200 KB prompt arrives whole. (#8)
+
 ## [0.3.3] - 2026-09-22
 
 ## [0.3.2] - 2026-09-22

@@ -276,7 +276,12 @@ function isExhaustionError(stderr, stdout) {
   return CODEX_EXHAUSTION_PATTERNS.some((re) => re.test(text));
 }
 
-function runCodex({ prompt, model = null, effort = DEFAULT_EFFORT, schemaPath, lastMessagePath, workdir }) {
+// The prompt travels on stdin, never in argv. Linux caps one argv string at 128 KiB
+// (MAX_ARG_STRLEN), and a judge prompt carries the agent, the golden rule and the whole
+// artifact: a 141 KB plan failed with E2BIG before any model saw it (a consumer,
+// 2026-10-09). `codex exec` and `claude --print` both read the prompt from stdin when
+// none is given on the command line.
+export function runCodex({ prompt, model = null, effort = DEFAULT_EFFORT, schemaPath, lastMessagePath, workdir }) {
   const args = ["exec", "--skip-git-repo-check", "--color", "never"];
   if (model) args.push("--model", model);
   // Reasoning effort goes through the -c key=value override path because codex
@@ -288,10 +293,10 @@ function runCodex({ prompt, model = null, effort = DEFAULT_EFFORT, schemaPath, l
   if (schemaPath) args.push("--output-schema", schemaPath);
   if (lastMessagePath) args.push("--output-last-message", lastMessagePath);
   if (workdir) args.push("--cd", workdir);
-  args.push(prompt);
 
   const result = spawnSync("codex", args, {
     encoding: "utf8",
+    input: prompt,
     // 256 MB buffer — judge prompts + cycle artifacts + golden rules can run
     // several hundred KB; xhigh reasoning generates verbose intermediate
     // events. Stay well above any plausible single-judge size.
@@ -304,7 +309,7 @@ function runCodex({ prompt, model = null, effort = DEFAULT_EFFORT, schemaPath, l
   };
 }
 
-function runClaudeFallback({ prompt, schemaPath, lastMessagePath, workdir, model = FALLBACK_MODEL }) {
+export function runClaudeFallback({ prompt, schemaPath, lastMessagePath, workdir, model = FALLBACK_MODEL }) {
   // Build the same prompt the Codex path would have received, but call
   // `claude` CLI in non-interactive mode with model + structured output.
   // The fallback emits the result via stdout (no --output-last-message
@@ -326,11 +331,10 @@ function runClaudeFallback({ prompt, schemaPath, lastMessagePath, workdir, model
       process.stderr.write(`[fallback] failed reading schema ${schemaPath}: ${e}\n`);
     }
   }
-  // Append the prompt as the last positional argument.
-  args.push(prompt);
-
+  // The prompt goes on stdin, like the Codex path, for the same argv limit.
   const result = spawnSync("claude", args, {
     encoding: "utf8",
+    input: prompt,
     maxBuffer: 256 * 1024 * 1024,
     cwd: workdir || process.cwd(),
   });
@@ -589,8 +593,10 @@ function runSetup() {
   process.exit(setup.status || 0);
 }
 
-// Entry point
-const argv = process.argv.slice(2);
+// Entry point. Only when run as a script, so the functions above can be imported by a
+// test without starting a judge.
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === __filename;
+const argv = isMain ? process.argv.slice(2) : ["--imported"];
 const cmd = argv[0];
 const args = parseArgs(argv.slice(1));
 
@@ -620,7 +626,7 @@ if (cmd === "judge") {
   runStatus();
 } else if (cmd === "setup") {
   runSetup();
-} else {
+} else if (isMain) {
   process.stderr.write(`Usage: ${path.basename(__filename)} <judge|auto|status|setup> [args]\n`);
   process.exit(2);
 }
