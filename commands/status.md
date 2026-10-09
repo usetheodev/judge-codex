@@ -6,10 +6,12 @@ allowed-tools: Bash(node:*), Bash(ls:*), Read
 
 # `/judge-codex:status`
 
+> Paths here name the CURRENT record root (`.squad/records/`). The companion resolves four older roots as fallbacks — see the `cycle-plan-context` skill for the full order.
+
 Lists:
 
 1. Active background jobs (running `codex-companion-judge.mjs` processes).
-2. Recent outputs in `knowledge-base/judge-codex/` (last 10).
+2. Recent outputs in `.squad/records/judge-codex/` (last 10).
 3. Disagreements with `plan` verdicts (when both sides scored the same artifact).
 
 ## Execution

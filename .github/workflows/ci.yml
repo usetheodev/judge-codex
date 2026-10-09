@@ -1,0 +1,55 @@
+# Measured on 2026-09-22 before being written: every job below PASSES in this
+# plugin today. A gate that is red on its first run is a gate somebody disables,
+# and then nothing is watching at all.
+#
+# What is deliberately absent is named at the bottom, with the reason. A CI that
+# quietly covers less than it appears to is the same defect as a report that does
+# not say what it did not analyse.
+name: ci
+
+on:
+  push:
+    branches: [workspace, develop, main]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: pip install pytest pyyaml
+      - name: Lint
+        run: ruff check scripts/ tests/
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax of the scripts that drive the loop
+        run: |
+          bash -n scripts/setup-check.sh
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: shellcheck
+        run: |
+          find scripts hooks -name '*.sh' -print0 \
+            | xargs -0 -r shellcheck -S warning -e SC1091 -e SC2155
+      - name: Configure git identity for the fixture repos
+        run: |
+          git config --global user.email ci@example.com
+          git config --global user.name ci
+      - name: Shell suites
+        run: |
+          set -e
+          bash tests/artifact-discovery.test.sh
+          bash tests/panel-seat.test.sh
+
+# WHAT THIS CI DOES NOT COVER, and why — measured 2026-09-22.
+#
+# No pytest step: this plugin ships no Python tests.
+#
+# Everything above this line was run against this plugin and passed before
+# being committed.

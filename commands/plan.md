@@ -7,7 +7,9 @@ allowed-tools: Read, Glob, Grep, Bash(node:*), AskUserQuestion
 
 # `/judge-codex:plan`
 
-Submits `knowledge-base/plans/<slug>-plan.md` to **Codex** as orthogonal jury, validated against `rules/plan-confidence-golden-rule.md`.
+> Paths here name the CURRENT record root (`.squad/records/`). The companion resolves four older roots as fallbacks — see the `cycle-plan-context` skill for the full order.
+
+Submits `.squad/records/plans/<slug>-plan.md` to **Codex** as orthogonal jury, validated against `rules/plan-confidence-golden-rule.md`.
 
 ## What Codex evaluates
 
@@ -24,7 +26,7 @@ Submits `knowledge-base/plans/<slug>-plan.md` to **Codex** as orthogonal jury, v
 ## Output
 
 ```
-knowledge-base/judge-codex/<slug>-plan-judge-<date>.json
+.squad/records/judge-codex/<slug>-plan-judge-<date>.json
 ```
 
 Schema: `schemas/plan-judge-output.schema.json`. Verdict vocabulary same as discover.
@@ -50,5 +52,5 @@ Identical to `/judge-codex:discover` (see that file). Stage flag = `plan`.
 ## Refuse to run when
 
 - Slug omitted.
-- `knowledge-base/plans/<slug>-plan.md` not found.
+- `.squad/records/plans/<slug>-plan.md` not found.
 - `codex` CLI absent.

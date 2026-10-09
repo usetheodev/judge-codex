@@ -6,12 +6,14 @@ allowed-tools: Read
 
 # `/judge-codex:help`
 
+> Paths here name the CURRENT record root (`.squad/records/`). The companion resolves four older roots as fallbacks — see the `cycle-plan-context` skill for the full order.
+
 Quick reference for `judge-codex` slash commands.
 
 | Command | Argument | Stage of `plan` cycle | Golden-rule contract |
 |---|---|---|---|
 | `/judge-codex:setup` | — | environment | n/a |
-| `/judge-codex:discover` | `<slug>` | After `/discover-plan` | `rules/discover-blueprint-golden-rule.md` |
+| `/judge-codex:discover` | `<slug>` | After `/discover-plan` | `rules/discover-opportunity-golden-rule.md` |
 | `/judge-codex:plan` | `<slug>` | After `/to-plan` (or after `/plan-confidence`) | `rules/plan-confidence-golden-rule.md` |
 | `/judge-codex:implementation` | `<slug>` | After `/implement` IMPLEMENTATION_COMPLETE | `rules/cycle-implement.md` |
 | `/judge-codex:final` | `<slug>` | After `/review` consolidated report | `rules/cycle-review.md` (review-of-review) |
@@ -33,7 +35,7 @@ Quick reference for `judge-codex` slash commands.
 
 When `judge-codex` and Claude `/review` reach **different verdicts** on the same artifact:
 
-1. The disagreement is logged in `knowledge-base/judge-codex/<slug>-<stage>-disagreement-<date>.json`.
+1. The disagreement is logged in `.squad/records/judge-codex/<slug>-<stage>-disagreement-<date>.json`.
 2. Pipeline downstream is **paused**.
 3. Human adjudication is required — neither LLM is automatically trusted.
 

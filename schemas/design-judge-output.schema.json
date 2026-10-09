@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/paulohenriquevn/judge-codex/schemas/design-judge-output.schema.json",
+  "title": "judge-codex design stage output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict",
+    "score",
+    "hard_caps_triggered",
+    "soft_caps_triggered",
+    "findings",
+    "summary",
+    "claude_side_verdict_anchor",
+    "model_used",
+    "elapsed_ms",
+    "fallback_used",
+    "scope"
+  ],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "DESIGN_AGREED",
+        "AWAITING_REVIEW",
+        "NEEDS_REVISION",
+        "INVALID"
+      ]
+    },
+    "score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "hard_caps_triggered": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "drawing_contradicts_code",
+          "open_question_drawn_as_decision",
+          "drawings_contradict_each_other",
+          "piece_placed_but_never_covered"
+        ]
+      }
+    },
+    "soft_caps_triggered": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "soft_floor_failure_path_undrawn",
+          "soft_floor_durability_claim_unbacked",
+          "soft_floor_boundary_unexamined",
+          "soft_floor_map_drawn_before_decisions"
+        ]
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "severity",
+          "stable_id",
+          "title",
+          "body",
+          "recommendation",
+          "confidence",
+          "drawing"
+        ],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "info"
+            ]
+          },
+          "stable_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recommendation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "confidence": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "drawing": {
+            "type": "string",
+            "enum": [
+              "D1-states",
+              "D2-trust",
+              "D3-sequence",
+              "D4-durability",
+              "D5-system-map",
+              "cross-drawing",
+              "sign-off"
+            ]
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "claude_side_verdict_anchor": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "disagreement": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "verdict",
+        "score",
+        "disagreement"
+      ]
+    },
+    "model_used": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": "gpt-5-codex"
+    },
+    "elapsed_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "fallback_used": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code_on_disk",
+        "drawings_read"
+      ],
+      "properties": {
+        "code_on_disk": {
+          "type": "boolean",
+          "description": "With code, R1 is askable and the audit is drawing-vs-code. Without it, only internal coherence was checked and the judge may not conclude the design is right."
+        },
+        "drawings_read": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Which of the five were actually read. A judge that read four and reported on five is claiming coverage it lacks."
+        }
+      }
+    }
+  }
+}

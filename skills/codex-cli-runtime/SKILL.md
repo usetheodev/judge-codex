@@ -40,7 +40,7 @@ The companion script:
 3. Loads the corresponding judge agent's system prompt from `${CLAUDE_PLUGIN_ROOT}/agents/<stage>-judge.md`.
 4. Assembles a single prompt with: agent system + golden-rule + artifact + stage-specific instructions.
 5. Calls `codex exec --json` and pipes the output through a JSON-schema validator.
-6. Writes the result to `knowledge-base/judge-codex/<slug>-<stage>-judge-<date>.json`.
+6. Writes the result to `.squad/records/judge-codex/<slug>-<stage>-judge-<date>.json`.
 7. Returns the JSON to stdout for the `judge-codex-jury` subagent to forward verbatim.
 
 ## Execution rules
@@ -63,5 +63,5 @@ The companion script:
 ## Safety rules
 
 - Read-only on the consumer repo. The companion NEVER modifies source files.
-- Outputs land only under `knowledge-base/judge-codex/`.
+- Outputs land only under `.squad/records/judge-codex/`.
 - Disagreement logs are append-only — never overwrite a prior disagreement record.

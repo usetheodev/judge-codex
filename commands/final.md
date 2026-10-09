@@ -7,7 +7,9 @@ allowed-tools: Read, Glob, Grep, Bash(node:*), AskUserQuestion
 
 # `/judge-codex:final`
 
-The **review-of-review** stage. Submits `knowledge-base/reviews/<slug>-review-<date>.md` (the consolidated output from `plan`'s 5–7-Claude-sub-agent `/review`) to **Codex** as orthogonal jury.
+> Paths here name the CURRENT record root (`.squad/records/`). The companion resolves four older roots as fallbacks — see the `cycle-plan-context` skill for the full order.
+
+The **review-of-review** stage. Submits `.squad/records/reviews/<slug>-review-<date>.md` (the consolidated output from `plan`'s 5–7-Claude-sub-agent `/review`) to **Codex** as orthogonal jury.
 
 ## Why this stage exists
 
@@ -27,7 +29,7 @@ The **review-of-review** stage. Submits `knowledge-base/reviews/<slug>-review-<d
 ## Output
 
 ```
-knowledge-base/judge-codex/<slug>-final-judge-<date>.json
+.squad/records/judge-codex/<slug>-final-judge-<date>.json
 ```
 
 Schema: `schemas/final-judge-output.schema.json`. Verdict vocabulary aligned with `cycle-review.md § Verdicts` (`READY_TO_MERGE` / `NEEDS_FIXES` / `NEEDS_DEEPER`) plus the meta-verdict tokens (`META_DEFECT_FOUND`, `AGGREGATOR_BUG_SUSPECTED`).
@@ -45,5 +47,5 @@ Identical to `/judge-codex:discover`. Stage = `final`.
 ## Refuse to run when
 
 - Slug omitted.
-- `knowledge-base/reviews/<slug>-review-*.md` not found.
+- `.squad/records/reviews/<slug>-review-*.md` not found.
 - `codex` CLI absent.

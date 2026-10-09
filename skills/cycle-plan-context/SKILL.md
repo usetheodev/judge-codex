@@ -10,15 +10,36 @@ How the companion script finds the artifacts to judge in a consumer repo that ha
 
 ## Conventional paths (in order of preference)
 
-For a given `<slug>`, the companion looks for artifacts under the **consumer repo root** (the cwd when the slash command was invoked):
+For a given `<slug>`, the companion looks under the **consumer repo root** (the cwd when
+the slash command was invoked). Every stage resolves the same five record roots, in this
+order, and takes the first that holds the artifact:
 
-| Stage | Artifact location | Fallback |
+```
+.squad/records/          the current write root
+.claude/records/         a plugin install before the root moved
+records/                 the standalone kit before the root moved
+.claude/knowledge-base/  legacy
+knowledge-base/          legacy
+```
+
+| Stage | Leaf under the record root | Filename |
 |---|---|---|
-| `discover` | `knowledge-base/discoveries/blueprints/<slug>-blueprint.md` | `.claude/knowledge-base/discoveries/blueprints/<slug>-blueprint.md` |
-| `plan` | `knowledge-base/plans/<slug>-plan.md` | `.claude/knowledge-base/plans/<slug>-plan.md` |
-| `implementation` | `knowledge-base/implementations/<slug>-implementation.md` | `.claude/knowledge-base/implementations/<slug>-implementation.md` |
-| `final` | `knowledge-base/reviews/<slug>-review-*.md` (latest by mtime) | `.claude/knowledge-base/reviews/<slug>-review-*.md` |
-| `final` (aux) | `agents/review-<slug>-*/` (per-agent files) | `.claude/agents/review-<slug>-*/` |
+| `discover` | `discoveries/opportunities/`, then `discoveries/blueprints/` | `<slug>-opportunity.md`, then `<slug>-blueprint.md` |
+| `plan` | `plans/` | `<slug>-plan.md` |
+| `implementation` | `implementations/` | `<slug>-implementation.md` |
+| `final` | `reviews/` | `<slug>-review-*.md` (latest by mtime) |
+| `final` (aux) | `reviews/review-<slug>-*/` | per-agent files |
+
+**Why five roots and two filenames.** This table listed `knowledge-base/` and
+`.claude/knowledge-base/` only — the two OLDEST locations the pipeline ever used — and
+named `<slug>-blueprint.md` for a cycle that now writes `<slug>-opportunity.md`.
+Measured 2026-09-21 against a project on the current layout: `judge --stage plan` printed
+`Artifact not found` for a plan that was on disk. The legacy roots stay last so a
+consumer that never migrated keeps its judge; they are fallbacks, not the default.
+
+`tests/artifact-discovery.test.sh` exercises all four stages on the current layout and
+the legacy one, with `codex` stubbed, so this table cannot drift from the code again
+without something going red.
 
 ## Companion repo detection
 
@@ -38,7 +59,14 @@ Once the consumer repo root is found, golden-rule files are looked up at:
 
 1. `<root>/rules/<rule>.md`
 2. `<root>/.claude/rules/<rule>.md`
-3. `${CLAUDE_PLUGIN_ROOT}/templates/golden-rules/<rule>.md` (plugin-bundled fallback)
+3. `<root>/skills/_kit-rules/<rule>.md`
+4. `<root>/.claude/skills/_kit-rules/<rule>.md`
+5. `${CLAUDE_PLUGIN_ROOT}/templates/golden-rules/<rule>.md` (plugin-bundled fallback)
+
+A stage may name more than one rule, tried in order. `discover` asks for
+`discover-opportunity-golden-rule.md` first and `discover-blueprint-golden-rule.md`
+second: the contract was renamed between cycle generations, and a judge pointed at the
+retired name grades against a file the consumer does not have.
 
 The fallback templates exist so judge-codex works even in repos that have not promoted the rule files from `skills/*/defaults/`.
 
@@ -48,21 +76,21 @@ The companion looks up the Claude-side verdict (when present) at:
 
 | Stage | Claude-side gate output |
 |---|---|
-| `discover` | `knowledge-base/reviews/<slug>-discover-confidence-*.json` |
-| `plan` | `knowledge-base/reviews/<slug>-plan-confidence-*.json` |
-| `implementation` | `knowledge-base/reviews/<slug>-implement-validate-*.md` + `knowledge-base/audits/<slug>-code-quality-*.md` |
-| `final` | `knowledge-base/reviews/<slug>-review-*.md` (the verdict line) |
+| `discover` | `<record-root>/reviews/<slug>-discover-confidence-*.json` |
+| `plan` | `<record-root>/reviews/<slug>-plan-confidence-*.json` |
+| `implementation` | `<record-root>/reviews/<slug>-implement-validate-*.md` + `<record-root>/audits/<slug>-code-quality-*.md` |
+| `final` | `<record-root>/reviews/<slug>-review-*.md` (the verdict line) |
 
 When found, the verdict is included in the prompt's anti-anchoring section (see `judge-prompting`).
 
 ## Output location
 
-All judge-codex output lands in the consumer repo at:
+All judge-codex output lands in the consumer repo under the FIRST record root that exists (the same list as above — `.squad/records/` on a current project), never at the repo root:
 
 ```
-knowledge-base/judge-codex/<slug>-<stage>-judge-<YYYY-MM-DD>.json
-knowledge-base/judge-codex/<slug>-<stage>-judge-<YYYY-MM-DD>.md         (human-readable)
-knowledge-base/judge-codex/<slug>-<stage>-disagreement-<YYYY-MM-DD>.json (when Claude vs Codex differ)
+<record-root>/judge-codex/<slug>-<stage>-judge-<YYYY-MM-DD>.json
+<record-root>/judge-codex/<slug>-<stage>-judge-<YYYY-MM-DD>.md         (human-readable)
+<record-root>/judge-codex/<slug>-<stage>-disagreement-<YYYY-MM-DD>.json (when Claude vs Codex differ)
 ```
 
 The directory is created if missing.

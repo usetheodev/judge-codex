@@ -42,5 +42,5 @@ If the Bash call fails or Codex cannot be invoked, return nothing — the compan
 ## Skill usage
 
 - `codex-cli-runtime` — exposes the binary's expected env vars + CLI shape.
-- `cycle-plan-context` — explains where `plan` artifacts live in a consumer repo (knowledge-base/discoveries/blueprints/, knowledge-base/plans/, etc.) so the companion script can locate them.
+- `cycle-plan-context` — explains where `plan` artifacts live in a consumer repo (.squad/records/discoveries/opportunities/, .squad/records/plans/, etc.) so the companion script can locate them.
 - `judge-prompting` — only used to compose the prompt the companion injects ahead of the artifact; you do not consult it directly during forwarding.

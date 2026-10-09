@@ -13,7 +13,7 @@
  * awareness is original).
  *
  * Designed to NEVER modify the consumer repository. Only reads artifacts +
- * writes output to knowledge-base/judge-codex/.
+ * writes output to the consumer's record root (see resolveOutDir).
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -23,36 +23,89 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const PLUGIN_ROOT = path.resolve(path.dirname(__filename), "..");
 
+// Where each stage's artifact lives, newest layout FIRST.
+//
+// This held only `knowledge-base/…` and `.claude/knowledge-base/…` — the two oldest
+// locations the pipeline ever used — while the current write root is
+// `<project>/.squad/records/`, with `records/` and `.claude/records/` as the
+// documented fallbacks. Measured 2026-09-21 on a project using the current layout:
+// `judge --stage plan --slug probe` printed "Artifact not found" for a plan that was
+// on disk. This plugin fills the orthogonal seat of a 2-of-3 panel, so a judge that
+// cannot open the document does not weaken the panel — it removes the one reviewer
+// the other two cannot stand in for.
+//
+// Order is resolution order, and the legacy entries stay: a consumer that never
+// migrated keeps its judge.
+const RECORD_ROOTS = [".squad/records", ".claude/records", "records", ".claude/knowledge-base", "knowledge-base"];
+
+const under = (leaf) => RECORD_ROOTS.map((root) => `${root}/${leaf}`);
+
+//: Durable knowledge lives beside the dated trail, not inside it, and the consumer keeps
+//: them apart on purpose: `records/` is what one run produced and is immutable; `wiki/`
+//: is what the project knows and is revised. A reader that folded them together would
+//: resolve a drawing set out of a run's output.
+const WIKI_ROOTS = [".squad/wiki", ".claude/wiki", "wiki"];
+
+const underWiki = (leaf) => WIKI_ROOTS.map((root) => `${root}/${leaf}`);
+
 const STAGE_DISCOVERY_PATHS = {
   discover: {
-    artifact: ["knowledge-base/discoveries/blueprints", ".claude/knowledge-base/discoveries/blueprints"],
-    suffix: "-blueprint.md",
-    rule: "discover-blueprint-golden-rule.md",
+    artifact: [...under("discoveries/opportunities"), ...under("discoveries/blueprints")],
+    // `-opportunity.md` is what cycle-discover writes now; `-blueprint.md` is what the
+    // ancestor cycle wrote, and both are accepted rather than guessed between.
+    suffix: ["-opportunity.md", "-blueprint.md"],
+    rule: ["discover-opportunity-golden-rule.md", "discover-blueprint-golden-rule.md"],
     agent: "discover-judge.md",
     schema: "discover-judge-output.schema.json",
   },
   plan: {
-    artifact: ["knowledge-base/plans", ".claude/knowledge-base/plans"],
-    suffix: "-plan.md",
-    rule: "plan-confidence-golden-rule.md",
+    artifact: under("plans"),
+    suffix: ["-plan.md"],
+    rule: ["plan-confidence-golden-rule.md"],
     agent: "plan-judge.md",
     schema: "plan-judge-output.schema.json",
   },
   implementation: {
-    artifact: ["knowledge-base/implementations", ".claude/knowledge-base/implementations"],
-    suffix: "-implementation.md",
-    rule: "cycle-implement.md",
+    artifact: under("implementations"),
+    suffix: ["-implementation.md"],
+    rule: ["cycle-implement.md"],
     agent: "implementation-judge.md",
     schema: "implementation-judge-output.schema.json",
   },
   final: {
-    artifact: ["knowledge-base/reviews", ".claude/knowledge-base/reviews"],
-    suffix: "-review-",
-    rule: "cycle-review.md",
+    artifact: under("reviews"),
+    suffix: ["-review-"],
+    rule: ["cycle-review.md"],
     agent: "final-judge.md",
     schema: "final-judge-output.schema.json",
   },
+  // The one stage whose artifact is a DIRECTORY rather than a file, and the one that
+  // reads out of the wiki. `bundle` lists the drawings the phase declares mandatory;
+  // a set missing one of them is incomplete, which the consumer's own
+  // `check_design_completeness.py` already refuses — so the judge is never asked to
+  // grade a partial set and never has to decide what a missing drawing means.
+  design: {
+    artifact: underWiki("design"),
+    bundle: ["states.md", "trust.md", "sequence.md", "durability.md", "system-map.md"],
+    rule: ["design-golden-rule.md"],
+    agent: "design-judge.md",
+    schema: "design-judge-output.schema.json",
+  },
 };
+
+//: Where this plugin's own output belongs: the record root the consumer already uses.
+//: It wrote to `knowledge-base/judge-codex/` unconditionally, which a project on the
+//: current layout does not read and which sits outside its declared write root — the
+//: same failure the consumer's `review-auditors.txt` names for commissioned auditors,
+//: "a tool the kit tells where to write is a tool the kit is responsible for".
+function resolveOutDir(consumerRoot) {
+  for (const root of RECORD_ROOTS) {
+    if (fs.existsSync(path.join(consumerRoot, root))) {
+      return path.join(consumerRoot, root, "judge-codex");
+    }
+  }
+  return path.join(consumerRoot, RECORD_ROOTS[0], "judge-codex");
+}
 
 function parseArgs(argv) {
   const out = { positional: [] };
@@ -96,6 +149,13 @@ function locateArtifact(consumerRoot, stage, slug) {
   for (const dir of cfg.artifact) {
     const abs = path.join(consumerRoot, dir);
     if (!fs.existsSync(abs)) continue;
+    if (cfg.bundle) {
+      // Present means every declared drawing is present. A partial set would be graded
+      // as if the missing ones said nothing, and "absent" and "empty" are different
+      // claims about a design.
+      if (cfg.bundle.every((f) => fs.existsSync(path.join(abs, f)))) return abs;
+      continue;
+    }
     if (stage === "final") {
       // Latest by mtime among <slug>-review-*.md
       const entries = fs.readdirSync(abs)
@@ -104,21 +164,30 @@ function locateArtifact(consumerRoot, stage, slug) {
         .sort((a, b) => b.mtime - a.mtime);
       if (entries[0]) return path.join(abs, entries[0].f);
     } else {
-      const candidate = path.join(abs, `${slug}${cfg.suffix}`);
-      if (fs.existsSync(candidate)) return candidate;
+      for (const suffix of (Array.isArray(cfg.suffix) ? cfg.suffix : [cfg.suffix])) {
+        const candidate = path.join(abs, `${slug}${suffix}`);
+        if (fs.existsSync(candidate)) return candidate;
+      }
     }
   }
   return null;
 }
 
 function locateGoldenRule(consumerRoot, ruleName) {
-  const candidates = [
-    path.join(consumerRoot, "rules", ruleName),
-    path.join(consumerRoot, ".claude", "rules", ruleName),
-    path.join(PLUGIN_ROOT, "templates", "golden-rules", ruleName),
-  ];
-  for (const c of candidates) {
-    if (fs.existsSync(c)) return c;
+  // A stage may name more than one rule: the contract was renamed between cycle
+  // generations (discover-blueprint -> discover-opportunity), and a judge pointed at
+  // the retired name grades against a file the consumer does not have.
+  for (const name of (Array.isArray(ruleName) ? ruleName : [ruleName])) {
+    const candidates = [
+      path.join(consumerRoot, "rules", name),
+      path.join(consumerRoot, ".claude", "rules", name),
+      path.join(consumerRoot, "skills", "_kit-rules", name),
+      path.join(consumerRoot, ".claude", "skills", "_kit-rules", name),
+      path.join(PLUGIN_ROOT, "templates", "golden-rules", name),
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) return c;
+    }
   }
   return null;
 }
@@ -132,6 +201,15 @@ const ARTIFACT_HARD_FENCE_BYTES = Number(process.env.JUDGE_CODEX_MAX_ARTIFACT_BY
 
 function readUtf8(p) {
   const stat = fs.statSync(p);
+  if (stat.isDirectory()) {
+    // Labelled, because a finding that cannot name its drawing is an opinion. Sorted,
+    // so two runs over one design read the same text in the same order.
+    return fs.readdirSync(p)
+      .filter((f) => f.endsWith(".md"))
+      .sort()
+      .map((f) => `<<<FILE ${f}>>>\n${fs.readFileSync(path.join(p, f), "utf8")}\n<<<END FILE ${f}>>>`)
+      .join("\n\n");
+  }
   if (stat.size > ARTIFACT_HARD_FENCE_BYTES) {
     // We still refuse to silently feed a multi-MB file when the user did not
     // explicitly raise the fence. Quality requires full context; safety
@@ -198,7 +276,12 @@ function isExhaustionError(stderr, stdout) {
   return CODEX_EXHAUSTION_PATTERNS.some((re) => re.test(text));
 }
 
-function runCodex({ prompt, model = null, effort = DEFAULT_EFFORT, schemaPath, lastMessagePath, workdir }) {
+// The prompt travels on stdin, never in argv. Linux caps one argv string at 128 KiB
+// (MAX_ARG_STRLEN), and a judge prompt carries the agent, the golden rule and the whole
+// artifact: a 141 KB plan failed with E2BIG before any model saw it (a consumer,
+// 2026-10-09). `codex exec` and `claude --print` both read the prompt from stdin when
+// none is given on the command line.
+export function runCodex({ prompt, model = null, effort = DEFAULT_EFFORT, schemaPath, lastMessagePath, workdir }) {
   const args = ["exec", "--skip-git-repo-check", "--color", "never"];
   if (model) args.push("--model", model);
   // Reasoning effort goes through the -c key=value override path because codex
@@ -210,10 +293,10 @@ function runCodex({ prompt, model = null, effort = DEFAULT_EFFORT, schemaPath, l
   if (schemaPath) args.push("--output-schema", schemaPath);
   if (lastMessagePath) args.push("--output-last-message", lastMessagePath);
   if (workdir) args.push("--cd", workdir);
-  args.push(prompt);
 
   const result = spawnSync("codex", args, {
     encoding: "utf8",
+    input: prompt,
     // 256 MB buffer — judge prompts + cycle artifacts + golden rules can run
     // several hundred KB; xhigh reasoning generates verbose intermediate
     // events. Stay well above any plausible single-judge size.
@@ -226,7 +309,7 @@ function runCodex({ prompt, model = null, effort = DEFAULT_EFFORT, schemaPath, l
   };
 }
 
-function runClaudeFallback({ prompt, schemaPath, lastMessagePath, workdir, model = FALLBACK_MODEL }) {
+export function runClaudeFallback({ prompt, schemaPath, lastMessagePath, workdir, model = FALLBACK_MODEL }) {
   // Build the same prompt the Codex path would have received, but call
   // `claude` CLI in non-interactive mode with model + structured output.
   // The fallback emits the result via stdout (no --output-last-message
@@ -248,11 +331,10 @@ function runClaudeFallback({ prompt, schemaPath, lastMessagePath, workdir, model
       process.stderr.write(`[fallback] failed reading schema ${schemaPath}: ${e}\n`);
     }
   }
-  // Append the prompt as the last positional argument.
-  args.push(prompt);
-
+  // The prompt goes on stdin, like the Codex path, for the same argv limit.
   const result = spawnSync("claude", args, {
     encoding: "utf8",
+    input: prompt,
     maxBuffer: 256 * 1024 * 1024,
     cwd: workdir || process.cwd(),
   });
@@ -320,7 +402,7 @@ function runJudge(opts) {
 }
 
 function writeOutput(consumerRoot, stage, slug, payload) {
-  const outDir = path.join(consumerRoot, "knowledge-base", "judge-codex");
+  const outDir = resolveOutDir(consumerRoot);
   fs.mkdirSync(outDir, { recursive: true });
   const date = new Date().toISOString().slice(0, 10);
   const jsonPath = path.join(outDir, `${slug}-${stage}-judge-${date}.json`);
@@ -355,7 +437,7 @@ async function judgeOne({ stage, slug, model }) {
   });
 
   const schemaPath = path.join(PLUGIN_ROOT, "schemas", cfg.schema);
-  const lastMessagePath = path.join(consumerRoot, "knowledge-base", "judge-codex", `.last-message-${stage}-${slug}.txt`);
+  const lastMessagePath = path.join(resolveOutDir(consumerRoot), `.last-message-${stage}-${slug}.txt`);
   fs.mkdirSync(path.dirname(lastMessagePath), { recursive: true });
 
   const t0 = Date.now();
@@ -472,7 +554,7 @@ async function runAuto({ slug, model, stopOnDisagreement }) {
       : "LOOP_BACK_TO_FAILING_STAGE",
   };
 
-  const outDir = path.join(consumerRoot, "knowledge-base", "judge-codex");
+  const outDir = resolveOutDir(consumerRoot);
   fs.mkdirSync(outDir, { recursive: true });
   const date = new Date().toISOString().slice(0, 10);
   const outPath = path.join(outDir, `${slug}-auto-judge-${date}.json`);
@@ -483,7 +565,7 @@ async function runAuto({ slug, model, stopOnDisagreement }) {
 
 function runStatus() {
   const consumerRoot = findConsumerRoot();
-  const outDir = path.join(consumerRoot, "knowledge-base", "judge-codex");
+  const outDir = resolveOutDir(consumerRoot);
   if (!fs.existsSync(outDir)) {
     process.stdout.write("No judge-codex outputs yet.\n");
     return;
@@ -511,8 +593,10 @@ function runSetup() {
   process.exit(setup.status || 0);
 }
 
-// Entry point
-const argv = process.argv.slice(2);
+// Entry point. Only when run as a script, so the functions above can be imported by a
+// test without starting a judge.
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === __filename;
+const argv = isMain ? process.argv.slice(2) : ["--imported"];
 const cmd = argv[0];
 const args = parseArgs(argv.slice(1));
 
@@ -542,7 +626,7 @@ if (cmd === "judge") {
   runStatus();
 } else if (cmd === "setup") {
   runSetup();
-} else {
+} else if (isMain) {
   process.stderr.write(`Usage: ${path.basename(__filename)} <judge|auto|status|setup> [args]\n`);
   process.exit(2);
 }
